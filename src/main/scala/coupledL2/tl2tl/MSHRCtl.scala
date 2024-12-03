@@ -26,6 +26,7 @@ import freechips.rocketchip.tilelink.TLMessages._
 import coupledL2._
 import coupledL2.prefetch.PrefetchTrain
 import coupledL2.utils.{XSPerfAccumulate, XSPerfHistogram, XSPerfMax}
+import chisel3.ltl._
 
 class MSHRSelector(implicit p: Parameters) extends L2Module {
   val io = IO(new Bundle() {
@@ -202,6 +203,10 @@ class MSHRCtl(implicit p: Parameters) extends L2Module {
 
     val timers = RegInit(VecInit(Seq.fill(mshrsAll)(0.U(64.W))))
     for (((timer, m), i) <- timers.zip(mshrs).zipWithIndex) {
+      val req = Sequence.BoolSequence(m.io.status.valid)
+      val resp = Sequence.BoolSequence(!m.io.status.valid)
+      AssertProperty(req.delayAtLeast(1).and(resp))
+
       when (m.io.alloc.valid) {
         timer := 1.U
       }.otherwise {

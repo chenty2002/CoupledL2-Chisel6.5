@@ -3,7 +3,7 @@ package coupledL2
 import chisel3._
 import chisel3.util._
 import org.chipsalliance.cde.config._
-import chisel3.stage.{ChiselGeneratorAnnotation, ChiselStage}
+import chisel3.stage.ChiselGeneratorAnnotation
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tile.MaxHartIdBits
 import freechips.rocketchip.tilelink._
@@ -562,9 +562,9 @@ object TestTop_L2 extends App {
   ChiselDB.init(false)
 
   val top = DisableMonitors(p => LazyModule(new TestTop_L2()(p)) )(config)
-  (new ChiselStage).execute(args, Seq(
-    ChiselGeneratorAnnotation(() => top.module)
-  ))
+  // (new ChiselStage).execute(args, Seq(
+  //   ChiselGeneratorAnnotation(() => top.module)
+  // ))
 
   ChiselDB.addToFileRegisters
   FileRegisters.write("./build")
@@ -580,9 +580,9 @@ object TestTop_L2_Standalone extends App {
   ChiselDB.init(false)
 
   val top = DisableMonitors(p => LazyModule(new TestTop_L2_Standalone()(p)) )(config)
-  (new ChiselStage).execute(args, Seq(
-    ChiselGeneratorAnnotation(() => top.module)
-  ))
+  // (new ChiselStage).execute(args, Seq(
+  //   ChiselGeneratorAnnotation(() => top.module)
+  // ))
 
   ChiselDB.addToFileRegisters
   FileRegisters.write("./build")
@@ -602,9 +602,9 @@ object TestTop_L2L3 extends App {
   Constantin.init(false)
 
   val top = DisableMonitors(p => LazyModule(new TestTop_L2L3()(p)) )(config)
-  (new ChiselStage).execute(args, Seq(
-    ChiselGeneratorAnnotation(() => top.module)
-  ))
+  // (new ChiselStage).execute(args, Seq(
+  //   ChiselGeneratorAnnotation(() => top.module)
+  // ))
 
   ChiselDB.addToFileRegisters
   Constantin.addToFileRegisters
@@ -625,9 +625,9 @@ object TestTop_L2L3L2 extends App {
   Constantin.init(false)
 
   val top = DisableMonitors(p => LazyModule(new TestTop_L2L3L2()(p)))(config)
-  (new ChiselStage).execute(args, Seq(
-    ChiselGeneratorAnnotation(() => top.module)
-  ))
+  // (new ChiselStage).execute(args, Seq(
+  //   ChiselGeneratorAnnotation(() => top.module)
+  // ))
 
   ChiselDB.addToFileRegisters
   Constantin.addToFileRegisters
@@ -647,9 +647,9 @@ object TestTop_fullSys extends App {
   ChiselDB.init(false)
 
   val top = DisableMonitors(p => LazyModule(new TestTop_fullSys()(p)))(config)
-  (new ChiselStage).execute(args, Seq(
-    ChiselGeneratorAnnotation(() => top.module)
-  ))
+  // (new ChiselStage).execute(args, Seq(
+  //   ChiselGeneratorAnnotation(() => top.module)
+  // ))
 
   ChiselDB.addToFileRegisters
   FileRegisters.write("./build")
