@@ -41,7 +41,7 @@ class Prefetcher(implicit p: Parameters) extends PrefetchModule {
   io.tlb_req <> DontCare
   val hartId = IO(Input(UInt(hartIdLen.W)))
   val randomIO = IO(new Bundle() {
-    val inputRandomAddr = Input(UInt(5.W))
+    val inputRandomAddr = Input(UInt(32.W))
     val inputNeedT = Input(new Bool)
   })
 

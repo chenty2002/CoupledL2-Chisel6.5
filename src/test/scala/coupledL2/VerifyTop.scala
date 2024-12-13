@@ -64,7 +64,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(),
       prefetch = Seq(CoupledL2AsL1PrefParam()),
-      mshrs = 4,
+//      mshrs = 4,
       hartId = i
     )
     case BankBitsKey => 0
@@ -80,7 +80,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       channelBytes = TLChannelBeatBytes(1),
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(DirtyField()),
-      mshrs = 4,
+//      mshrs = 4,
       hartId = i
     )
     case BankBitsKey => 0
@@ -162,7 +162,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
 
     // Input signals for formal verification
     val io = IO(new Bundle {
-      val topInputRandomAddrs = Input(Vec(nrL2, UInt(5.W)))
+      val topInputRandomAddrs = Input(Vec(nrL2, UInt(32.W)))
       val topInputNeedT = Input(Vec(nrL2, Bool()))
     })
 
@@ -178,6 +178,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       case tlSlice: TLSlice =>
         val dir_resetFinish = BoringUtils.bore(tlSlice.directory.resetFinish)
         assume(verify_timer < 100.U || dir_resetFinish)
+        assume(io.topInputRandomAddrs.map(_ < (1<<5).U).reduce(_ && _))
     }
   }
 }
