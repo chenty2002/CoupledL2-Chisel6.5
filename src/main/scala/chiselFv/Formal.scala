@@ -83,7 +83,7 @@ trait Formal {
     cst.io.out
   }
 
-  def assertLiveness(req: Bool, resp: Bool, msg: String = "")(implicit sourceInfo: SourceInfo): Unit = {
+  def astLiveness(req: Bool, resp: Bool, msg: String = "")(implicit sourceInfo: SourceInfo): Unit = {
     val reqProp = Sequence.BoolSequence(req)
     val respProp = Sequence.BoolSequence(resp)
     when(notChaos) {
@@ -91,12 +91,25 @@ trait Formal {
     }
   }
 
-  def assertLivenessTimer(req: Bool, resp: Bool, n: Int, msg: String = "")
-                         (implicit sourceInfo: SourceInfo): Unit = {
+  def astRelaxedLiveness(req: Bool, resp: Bool, n: Int, msg: String = "")
+                        (implicit sourceInfo: SourceInfo): Unit = {
     val reqProp = Sequence.BoolSequence(req)
     val respProp = Sequence.BoolSequence(resp)
     when(notChaos) {
       AssertProperty(reqProp.implication(respProp.delayRange(1, n)), label = Option(msg))
+    }
+  }
+
+  def assertLivenessTimer(cond: Bool, reset: Bool, n: Int, msg: String = "")
+                         (implicit sourceInfo: SourceInfo): Unit = {
+    val timer = RegInit(0.U(64.W))
+    when(reset) {
+      timer := 1.U
+    }.elsewhen(cond) {
+      timer := timer + 1.U
+    }
+    when(notChaos) {
+      assert(timer <= n.U, msg)
     }
   }
 }

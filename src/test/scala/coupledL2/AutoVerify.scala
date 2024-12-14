@@ -19,7 +19,8 @@ object AutoVerify_L2L3L2 extends App {
     var line = pyFile.readLine()
     while(line != null) {
       pylines.append(
-        line.replaceFirst("open\\('.*', 'w'\\) as fout:", s"open('${filename}', 'w') as fout:")
+        line.replaceFirst("open\\('.*'\\) as fin:", "open('Verilog/VerifyTop.sv') as fin:")
+          .replaceFirst("open\\('.*', 'w'\\) as fout:", s"open('${filename}', 'w') as fout:")
       )
       line = pyFile.readLine()
     }
@@ -41,7 +42,7 @@ object AutoVerify_L2L3L2 extends App {
     )
   })
 
-  val suffix = "acquire"
+  val suffix = "mshrctl_simp_250-270"
   val path = "/home/lyj238/VerifyL2"
   val top = DisableMonitors(p => LazyModule(new VerifyTop_L2L3L2()(p)))(config)
 
@@ -50,10 +51,10 @@ object AutoVerify_L2L3L2 extends App {
     "VerifyTop.sv",
     ChiselStage.emitSystemVerilog(top.module, firtoolOpts = Array("--disable-annotation-unknown"))
   )
-  val cp = s"cp Verilog/L2L3L2/VerifyTop.sv .".!
+  //  val cp = s"cp Verilog/VerifyTop.sv .".!
   val filename = s"VerifyTop_${suffix}.sv"
   modifyPy(filename)
   val py = "python set_verify_.py".!
-  val rm = s"rm -f ${path}/${suffix}/${filename}".!
-  val cpjg = s"cp ${filename} ${path}/${suffix}".!
+  //  val rm = s"rm -f ${path}/${suffix}/${filename}".!
+  //  val cpjg = s"cp ${filename} ${path}/${suffix}".!
 }
