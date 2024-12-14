@@ -205,7 +205,7 @@ class MSHRCtl(implicit p: Parameters) extends L2Module with Formal {
     val timers = RegInit(VecInit(Seq.fill(mshrsAll)(0.U(64.W))))
     for (((timer, m), i) <- timers.zip(mshrs).zipWithIndex) {
       if(cacheParams.prefetch.isEmpty) {
-        assertLiveness(m.io.status.valid, !m.io.status.valid)
+        astLiveness(m.io.status.valid, !m.io.status.valid)
         assertLivenessTimer(m.io.status.valid, !m.io.status.valid, 1000)
       }
 
