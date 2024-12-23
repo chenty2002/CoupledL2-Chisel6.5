@@ -7,3 +7,5 @@ build/
 .bloop/
 .metals/
 .vscode/
+*.sv
+set_verify_.py

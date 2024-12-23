@@ -1,13 +1,15 @@
 package coupledL2
 
 import chisel3._
+import chisel3.ltl._
 import circt.stage.ChiselStage
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
+import chiselFv._
 import coupledL2.tl2tl.TL2TLCoupledL2
-import coupledL2.tl2tl.{Slice => TLSlice}
+import coupledL2.tl2tl.{Slice => TLSliceL2}
 import coupledL2AsL1.prefetch.CoupledL2AsL1PrefParam
-import coupledL2AsL1.tl2tl.{TL2TLCoupledL2 => TLCoupledL2AsL1}
+import coupledL2AsL1.tl2tl.{Slice => TLSliceL1, TL2TLCoupledL2 => TLCoupledL2AsL1}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import huancun._
@@ -58,9 +60,9 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
     case L2ParamKey => L2Param(
       name = s"l1$i",
       ways = 2,
-      sets = 2,
-      blockBytes = 2,
-      channelBytes = TLChannelBeatBytes(1),
+//      sets = 2,
+//      blockBytes = 2,
+//      channelBytes = TLChannelBeatBytes(1),
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(),
       prefetch = Seq(CoupledL2AsL1PrefParam()),
@@ -75,9 +77,9 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
     case L2ParamKey => L2Param(
       name = s"l2$i",
       ways = 2,
-      sets = 4,
-      blockBytes = 2,
-      channelBytes = TLChannelBeatBytes(1),
+//      sets = 4,
+//      blockBytes = 2,
+//      channelBytes = TLChannelBeatBytes(1),
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(DirtyField()),
 //      mshrs = 4,
@@ -92,16 +94,16 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       name = "L3",
       level = 3,
       ways = 2,
-      sets = 4,
-      blockBytes = 2,
-      channelBytes = TLChannelBeatBytes(1),
+//      sets = 4,
+//      blockBytes = 2,
+//      channelBytes = TLChannelBeatBytes(1),
       inclusive = false,
       clientCaches = (0 until nrL2).map(i =>
         CacheParameters(
           name = s"l2",
-          sets = 4,
+          sets = 128,
           ways = 2 + 2,
-          blockGranularity = log2Ceil(4)
+          blockGranularity = log2Ceil(128)
         ),
       ),
       echoField = Seq(DirtyField()),
@@ -112,18 +114,18 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
 
 
   val xbar = TLXbar()
-  val ram = LazyModule(new TLRAM(AddressSet(0, 0x1FL), beatBytes = 1))
+  val ram = LazyModule(new TLRAM(AddressSet(0, 0xFFFFFFL), beatBytes = 1))
 
-  l0_nodes.zip(l1_nodes).zipWithIndex map {
-    case ((l0, l1), i) => l1 := l0
+  l0_nodes.zip(l1_nodes) map {
+    case (l0, l1) => l1 := l0
   }
 
   l1_nodes.zip(l2_nodes).zipWithIndex map {
-    case ((l1d, l2), i) => l2 := TLLogger(s"L2_L1_${i}") := TLBuffer() := l1d
+    case ((l1d, l2), i) => l2 := TLLogger(s"L2_L1_$i") := TLBuffer() := l1d
   }
 
   l2_nodes.zipWithIndex map {
-    case (l2, i) => xbar := TLLogger(s"L3_L2_${i}") := TLBuffer() := l2
+    case (l2, i) => xbar := TLLogger(s"L3_L2_$i") := TLBuffer() := l2
   }
 
   ram.node :=
@@ -134,7 +136,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       TLLogger(s"MEM_L3") :=*
       l3.node :=* xbar
 
-  lazy val module = new LazyModuleImp(this) {
+  lazy val module = new LazyModuleImp(this) with Formal {
     val timer = WireDefault(0.U(64.W))
     val logEnable = WireDefault(false.B)
     val clean = WireDefault(false.B)
@@ -174,11 +176,76 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
 
     val verify_timer = RegInit(0.U(50.W))
     verify_timer := verify_timer + 1.U
-    coupledL2(0).module.slices(0) match {
-      case tlSlice: TLSlice =>
+
+
+    val offsetBits = 6
+    val setBits = 7
+    val tagBits = 11
+    val bankBits = 0
+
+    val addr_offsetBits = 1
+    val addr_setBits = 1
+    val addr_tagBits = 3
+
+    io.topInputRandomAddrs.foreach { addr =>
+      val prefix = addr(31, tagBits + setBits + offsetBits)
+      val tag = (addr >> (offsetBits + setBits)) (tagBits - 1, 0)
+      val set = (addr >> offsetBits) (setBits - 1, 0)
+      val offset = addr(offsetBits - 1, 0)
+      assume(prefix === 0.U)
+      assume(tag < (1 << addr_tagBits).U)
+      assume(set < (1 << addr_setBits).U)
+      assume(offset < (1 << addr_offsetBits).U)
+    }
+
+    coupledL2(0).module.slices.head match {
+      case tlSlice: TLSliceL2 =>
         val dir_resetFinish = BoringUtils.bore(tlSlice.directory.resetFinish)
         assume(verify_timer < 100.U || dir_resetFinish)
-        assume(io.topInputRandomAddrs.map(_ < (1<<5).U).reduce(_ && _))
+    }
+
+    coupledL2AsL1.foreach { l1 =>
+      l1.module.slices.head match {
+        case tlSlice: TLSliceL1 =>
+          tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
+            case (mshr, i) =>
+              if (i >= 4)
+                assume(!mshr.io.status.valid && !mshr.io.alloc.valid)
+              else if (i == 3)
+                assume(mshr.io.status.bits.channel =/= 1.U)
+
+              if (i < 4)
+                assume(mshr.io.status.bits.channel =/= 1.U)
+          }
+      }
+    }
+
+    coupledL2.foreach { l2 =>
+      l2.module.slices.head match {
+        case tlSlice: TLSliceL2 =>
+          tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
+            case (mshr, i) =>
+              if (i >= 4)
+                assume(!mshr.io.status.valid && !mshr.io.alloc.valid)
+              else if (i == 3)
+                assume(mshr.io.status.bits.channel =/= 1.U)
+
+              if (i < 4) {
+                assume(mshr.io.status.bits.channel =/= 1.U)
+
+                val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
+                astRelaxedLiveness(MSHRStatus, !MSHRStatus, 300)
+                astRelaxedLiveness(MSHRStatus, !MSHRStatus, 500)
+                astRelaxedLiveness(MSHRStatus, !MSHRStatus, 800)
+
+                AssumeProperty(
+                  Sequence.BoolSequence(MSHRStatus).implication(
+                    Sequence.BoolSequence(!MSHRStatus).delayRange(1, 1000)
+                  )
+                )
+              }
+          }
+      }
     }
   }
 }
