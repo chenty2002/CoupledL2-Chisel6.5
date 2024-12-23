@@ -209,13 +209,13 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
         case tlSlice: TLSliceL1 =>
           tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
             case (mshr, i) =>
+              val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
+              val allocStatus = BoringUtils.bore(mshr.io.alloc.valid)
+              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
               if (i >= 4)
-                assume(!mshr.io.status.valid && !mshr.io.alloc.valid)
+                assume(!MSHRStatus && !allocStatus)
               else if (i == 3)
-                assume(mshr.io.status.bits.channel =/= 1.U)
-
-              if (i < 4)
-                assume(mshr.io.status.bits.channel =/= 1.U)
+                assume(channel =/= 1.U)
           }
       }
     }
@@ -225,15 +225,14 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
         case tlSlice: TLSliceL2 =>
           tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
             case (mshr, i) =>
+              val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
+              val allocStatus = BoringUtils.bore(mshr.io.alloc.valid)
+              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
               if (i >= 4)
-                assume(!mshr.io.status.valid && !mshr.io.alloc.valid)
+                assume(!MSHRStatus && !allocStatus)
               else if (i == 3)
-                assume(mshr.io.status.bits.channel =/= 1.U)
+                assume(channel =/= 1.U)
 
-              if (i < 4) {
-                assume(mshr.io.status.bits.channel =/= 1.U)
-
-                val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 300)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 500)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 800)
@@ -243,7 +242,6 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
                     Sequence.BoolSequence(!MSHRStatus).delayRange(1, 1000)
                   )
                 )
-              }
           }
       }
     }
