@@ -24,10 +24,7 @@ import org.chipsalliance.cde.config.Parameters
 import freechips.rocketchip.tilelink._
 import freechips.rocketchip.tilelink.TLMessages._
 import coupledL2._
-import coupledL2.prefetch.PrefetchTrain
 import coupledL2.utils.{XSPerfAccumulate, XSPerfHistogram, XSPerfMax}
-import chisel3.ltl._
-import chiselFv.Formal
 
 class MSHRSelector(implicit p: Parameters) extends L2Module {
   val io = IO(new Bundle() {
@@ -40,7 +37,7 @@ class MSHRSelector(implicit p: Parameters) extends L2Module {
   })
 }
 
-class MSHRCtl(implicit p: Parameters) extends L2Module with Formal {
+class MSHRCtl(implicit p: Parameters) extends L2Module {
   val io = IO(new Bundle() {
     /* interact with req arb */
     val fromReqArb = Input(new Bundle() {
@@ -166,7 +163,7 @@ class MSHRCtl(implicit p: Parameters) extends L2Module with Formal {
   io.nestedwbDataId.bits := ParallelPriorityMux(mshrs.zipWithIndex.map {
     case (mshr, i) => (mshr.io.nestedwbData, i.U)
   })
-//  assert(RegNext(PopCount(mshrs.map(_.io.nestedwbData)) <= 1.U), "should only be one nestedwbData")
+  assert(RegNext(PopCount(mshrs.map(_.io.nestedwbData)) <= 1.U), "should only be one nestedwbData")
 
   dontTouch(io.sourceA)
 
@@ -204,11 +201,6 @@ class MSHRCtl(implicit p: Parameters) extends L2Module with Formal {
 
     val timers = RegInit(VecInit(Seq.fill(mshrsAll)(0.U(64.W))))
     for (((timer, m), i) <- timers.zip(mshrs).zipWithIndex) {
-      if(cacheParams.prefetch.isEmpty) {
-        astLiveness(m.io.status.valid, !m.io.status.valid)
-        assertLivenessTimer(m.io.status.valid, !m.io.status.valid, 1000)
-      }
-
       when (m.io.alloc.valid) {
         timer := 1.U
       }.otherwise {

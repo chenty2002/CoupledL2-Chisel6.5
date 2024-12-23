@@ -1,13 +1,15 @@
 package coupledL2
 
 import chisel3._
+import chisel3.ltl._
 import circt.stage.ChiselStage
 import chisel3.util._
 import chisel3.util.experimental.BoringUtils
+import chiselFv._
 import coupledL2.tl2tl.TL2TLCoupledL2
-import coupledL2.tl2tl.{Slice => TLSlice}
+import coupledL2.tl2tl.{Slice => TLSliceL2}
 import coupledL2AsL1.prefetch.CoupledL2AsL1PrefParam
-import coupledL2AsL1.tl2tl.{TL2TLCoupledL2 => TLCoupledL2AsL1}
+import coupledL2AsL1.tl2tl.{Slice => TLSliceL1, TL2TLCoupledL2 => TLCoupledL2AsL1}
 import freechips.rocketchip.diplomacy._
 import freechips.rocketchip.tilelink._
 import huancun._
@@ -134,7 +136,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       TLLogger(s"MEM_L3") :=*
       l3.node :=* xbar
 
-  lazy val module = new LazyModuleImp(this) {
+  lazy val module = new LazyModuleImp(this) with Formal {
     val timer = WireDefault(0.U(64.W))
     val logEnable = WireDefault(false.B)
     val clean = WireDefault(false.B)
@@ -175,9 +177,22 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
     val verify_timer = RegInit(0.U(50.W))
     verify_timer := verify_timer + 1.U
     coupledL2(0).module.slices(0) match {
-      case tlSlice: TLSlice =>
+      case tlSlice: TLSliceL2 =>
         val dir_resetFinish = BoringUtils.bore(tlSlice.directory.resetFinish)
         assume(verify_timer < 100.U || dir_resetFinish)
+    }
+
+    coupledL2.foreach { l2 =>
+      l2.module.slices.head match {
+        case tlSlice: TLSliceL2 =>
+          tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
+            case (mshr, i) =>
+              val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
+              astRelaxedLiveness(MSHRStatus, !MSHRStatus, 200)
+              astRelaxedLiveness(MSHRStatus, !MSHRStatus, 250)
+              astRelaxedLiveness(MSHRStatus, !MSHRStatus, 300)
+          }
+      }
     }
   }
 }
