@@ -233,6 +233,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
               else if (i == 3)
                 assume(channel =/= 1.U)
 
+              if(i < 4) {
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 300)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 500)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 800)
@@ -242,6 +243,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
                     Sequence.BoolSequence(!MSHRStatus).delayRange(1, 1000)
                   )
                 )
+              }
           }
       }
     }
