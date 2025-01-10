@@ -285,7 +285,8 @@ abstract class CoupledL2Base(implicit p: Parameters) extends LazyModule with Has
     require(banks == node.in.size)
 
     val io = IO(new Bundle {
-      val prefetcherInputRandomAddr = Input(UInt(5.W))
+      val prefetcherSet = Input(UInt(7.W))
+      val prefetcherTag = Input(UInt(11.W))
       val prefetcherNeedT = Input(Bool())
       val hartId = Input(UInt(hartIdLen.W))
     //  val l2_hint = Valid(UInt(32.W))
@@ -326,8 +327,9 @@ abstract class CoupledL2Base(implicit p: Parameters) extends LazyModule with Has
       case BankBitsKey => bankBits
     }
     val prefetcher = prefetchOpt.map(_ => Module(new Prefetcher()(pftParams)))
-    prefetcher.get.randomIO.inputRandomAddr := io.prefetcherInputRandomAddr
-    prefetcher.get.randomIO.inputNeedT := io.prefetcherNeedT
+    prefetcher.get.stimuli.set := io.prefetcherSet
+    prefetcher.get.stimuli.tag := io.prefetcherTag
+    prefetcher.get.stimuli.needT := io.prefetcherNeedT
     val prefetchTrains = prefetchOpt.map(_ => Wire(Vec(banks, DecoupledIO(new PrefetchTrain()(pftParams)))))
     val prefetchResps = prefetchOpt.map(_ => Wire(Vec(banks, DecoupledIO(new PrefetchResp()(pftParams)))))
     val prefetchReqsReady = WireInit(VecInit(Seq.fill(banks)(false.B)))
