@@ -37,12 +37,14 @@ class PrefetchIO(implicit p: Parameters) extends PrefetchBundle {
 }
 
 class Prefetcher(implicit p: Parameters) extends PrefetchModule {
+  println(s"L1 setBits: $setBits, tagBits: $tagBits, offsetBits: $offsetBits")
   val io = IO(new PrefetchIO)
   io.tlb_req <> DontCare
   val hartId = IO(Input(UInt(hartIdLen.W)))
-  val randomIO = IO(new Bundle() {
-    val inputRandomAddr = Input(UInt(32.W))
-    val inputNeedT = Input(new Bool)
+  val stimuli = IO(new Bundle() {
+    val set = Input(UInt(setBits.W))
+    val tag = Input(UInt(tagBits.W))
+    val needT = Input(new Bool)
   })
 
   prefetchers.head match {
@@ -55,10 +57,9 @@ class Prefetcher(implicit p: Parameters) extends PrefetchModule {
       io.train.ready := true.B
 
       io.req.valid := true.B
-      val (tag, set, _) = parseAddress(randomIO.inputRandomAddr)
-      io.req.bits.tag := tag
-      io.req.bits.set := set
-      io.req.bits.needT := randomIO.inputNeedT
+      io.req.bits.tag := stimuli.tag
+      io.req.bits.set := stimuli.set
+      io.req.bits.needT := stimuli.needT
 
       io.req.bits.pfSource := PfSource.NoWhere.id.U
 
