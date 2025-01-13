@@ -66,7 +66,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(),
       prefetch = Seq(CoupledL2AsL1PrefParam()),
-      mshrs = 4,
+//      mshrs = 4,
       hartId = i
     )
     case BankBitsKey => 0
@@ -82,7 +82,7 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
 //      channelBytes = TLChannelBeatBytes(1),
       clientCaches = Seq(L1Param(aliasBitsOpt = Some(2))),
       echoField = Seq(DirtyField()),
-      mshrs = 4,
+//      mshrs = 4,
       hartId = i
     )
     case BankBitsKey => 0
@@ -191,24 +191,24 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
     coupledL2(0).module.slices.head match {
       case tlSlice: TLSliceL2 =>
         val dir_resetFinish = BoringUtils.bore(tlSlice.directory.resetFinish)
-        assume(verify_timer < 100.U || dir_resetFinish)
+        assume(verify_timer < 200.U || dir_resetFinish)
     }
 
-//    coupledL2AsL1.foreach { l1 =>
-//      l1.module.slices.head match {
-//        case tlSlice: TLSliceL1 =>
-//          tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
-//            case (mshr, i) =>
-//              val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
-//              val allocStatus = BoringUtils.bore(mshr.io.alloc.valid)
-//              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
-//              if (i >= 4)
-//                assume(!MSHRStatus && !allocStatus)
-//              else if (i == 3)
-//                assume(channel =/= 1.U)
-//          }
-//      }
-//    }
+    coupledL2AsL1.foreach { l1 =>
+      l1.module.slices.head match {
+        case tlSlice: TLSliceL1 =>
+          tlSlice.mshrCtl.mshrs.zipWithIndex.foreach {
+            case (mshr, i) =>
+              val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
+              val allocStatus = BoringUtils.bore(mshr.io.alloc.valid)
+              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
+              if (i >= 4)
+                assume(!MSHRStatus && !allocStatus)
+              else if (i == 3)
+                assume(channel =/= 1.U)
+          }
+      }
+    }
 
     coupledL2.foreach { l2 =>
       l2.module.slices.head match {
@@ -217,22 +217,22 @@ class VerifyTop_L2L3L2()(implicit p: Parameters) extends LazyModule {
             case (mshr, i) =>
               val MSHRStatus = BoringUtils.bore(mshr.io.status.valid)
               val allocStatus = BoringUtils.bore(mshr.io.alloc.valid)
-//              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
-//              if (i >= 4)
-//                assume(!MSHRStatus && !allocStatus)
-//              else if (i == 3)
-//                assume(channel =/= 1.U)
+              val channel = BoringUtils.bore(mshr.io.status.bits.channel)
+              if (i >= 4)
+                assume(!MSHRStatus && !allocStatus)
+              else if (i == 3)
+                assume(channel =/= 1.U)
 
               if(i < 4) {
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 300)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 500)
                 astRelaxedLiveness(MSHRStatus, !MSHRStatus, 800)
 
-                AssumeProperty(
-                  Sequence.BoolSequence(MSHRStatus).implication(
-                    Sequence.BoolSequence(!MSHRStatus).delayRange(1, 1000)
-                  )
-                )
+//                AssumeProperty(
+//                  Sequence.BoolSequence(MSHRStatus).implication(
+//                    Sequence.BoolSequence(!MSHRStatus).delayRange(1, 1000)
+//                  )
+//                )
               }
           }
       }
